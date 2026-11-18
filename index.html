@@ -52,7 +52,7 @@
   .row output{width:56px;text-align:right;font-weight:700}
   .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
   .hint{color:var(--mut);font-size:13px}
-  #swatch{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:middle;border:1px solid #fff4;margin-left:6px}
+  #swatch,#swatch2{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:middle;border:1px solid #fff4;margin-left:6px}
 </style>
 </head>
 <body>
@@ -102,6 +102,7 @@
     <div class="row"><label><span class="sw" style="background:var(--side)"></span>Kotlety</label><input type="range" id="gSide" min="1" max="20" value="6"><output id="gSideO"></output></div>
     <h2 style="margin-top:16px">Strojek</h2>
     <div class="row"><label>Barva nálepky <span id="swatch"></span></label><button id="btnCal2">Nastavit znovu</button></div>
+    <div class="row"><label>2. barva (např. značka na hřebenu) <span id="swatch2"></span></label><button id="btnCal3">Přidat</button><button id="btnCalDel">✕</button></div>
     <div class="row"><label>Citlivost na barvu</label><input type="range" id="sens" min="6" max="30" value="14"><output id="sensO"></output></div>
     <div class="row" style="margin-top:14px"><button id="mirrorBtn" style="flex:1"></button><button class="pri" id="closeSet" style="flex:1">Hotovo</button></div>
   </div></div>
@@ -109,8 +110,10 @@
 
 <script type="module">
 const $ = id => document.getElementById(id);
-const S = {neck:38, cheek:0, tol:3, gCheek:9, gChin:12, gSide:6, sens:14, mirror:true, sound:true, step:0, target:null};
+const S = {neck:38, cheek:0, tol:3, gCheek:9, gChin:12, gSide:6, sens:14, mirror:true, sound:true, step:0, targets:[]};
 try { Object.assign(S, JSON.parse(localStorage.getItem('vousy2') || '{}')); } catch(e){}
+if (S.target){ S.targets=[S.target]; delete S.target; }
+let calSlot=0;
 const save = () => { try { localStorage.setItem('vousy2', JSON.stringify(S)); } catch(e){} };
 const show = {lines:true, zones:true};
 
@@ -232,7 +235,7 @@ function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.mi
   return [h, mx?d/mx:0, mx];}
 
 function trackMarker(){
-  if (!S.target) { marker=null; return; }
+  if (!S.targets.length) { marker=null; return; }
   sctx.drawImage(video,0,0,scan.width,scan.height);
   const k = scan.width/W;
   let x0=0,y0=0,x1=scan.width,y1=scan.height;
@@ -243,13 +246,15 @@ function trackMarker(){
   }
   if (x1<=x0||y1<=y0) { marker=null; return; }
   const d = sctx.getImageData(x0,y0,x1-x0,y1-y0).data, w=x1-x0;
-  const [th,ts,tv]=S.target, tolH=S.sens, minS=Math.max(.25,ts*.5), minV=Math.max(.18,tv*.4);
+  const T=S.targets.map(([th,ts,tv])=>({th, minS:Math.max(.3,ts*.65), minV:Math.max(.2,tv*.45)})), tolH=S.sens;
   let n=0,sx=0,sy=0;
   for (let i=0,p=0;i<d.length;i+=4,p++){
     const [h,s,v]=rgb2hsv(d[i],d[i+1],d[i+2]);
-    if (s<minS||v<minV) continue;
-    let dh=Math.abs(h-th); if(dh>180)dh=360-dh;
-    if (dh<=tolH){ n++; sx+=p%w; sy+=(p/w)|0; }
+    for (const t of T){
+      if (s<t.minS||v<t.minV) continue;
+      let dh=Math.abs(h-t.th); if(dh>180)dh=360-dh;
+      if (dh<=tolH){ n++; sx+=p%w; sy+=(p/w)|0; break; }
+    }
   }
   if (n>=5){
     const m = V((x0+sx/n)/k, (y0+sy/n)/k);
@@ -264,8 +269,9 @@ function screenToRaw(cx,cy){
   if (S.mirror) x=W-x;
   return V(x,y);
 }
-function startCalib(){ calibrating=true; $('calib').style.display='block'; $('sheet').style.display='none'; }
-$('btnCal').onclick = startCalib; $('btnCal2').onclick = startCalib;
+function startCalib(slot=0){ calSlot=slot; calibrating=true; $('calib').style.display='block'; $('sheet').style.display='none'; }
+$('btnCal').onclick = ()=>startCalib(0); $('btnCal2').onclick = ()=>startCalib(0); $('btnCal3').onclick = ()=>startCalib(1);
+$('btnCalDel').onclick = ()=>{ S.targets=S.targets.slice(0,1); save(); applySettings(); };
 cv.addEventListener('pointerdown', ev => {
   if (!calibrating) return;
   const p = screenToRaw(ev.clientX, ev.clientY);
@@ -275,7 +281,7 @@ cv.addEventListener('pointerdown', ev => {
   const hsv=rgb2hsv(r/n,g/n,b/n);
   calibrating=false; $('calib').style.display='none';
   if (hsv[1]<.3){ status('Tahle barva je moc šedá – použij výraznou barevnou nálepku', 4000); return; }
-  S.target=hsv; save(); applySettings(); status('Strojek nastaven ✓', 2000);
+  S.targets[calSlot===1&&S.targets.length?1:0]=hsv; save(); applySettings(); status(calSlot===1?'2. barva uložena ✓':'Strojek nastaven ✓', 2000);
 });
 
 // ---------- upozornění ----------
@@ -371,7 +377,7 @@ function loop(){
     if (!G && landmarker) { wEl.style.display='block'; wEl.textContent='Nevidím obličej – podívej se do kamery'; wEl.style.color='var(--warn)'; }
     else if (marker && G){ const w=whereIs(marker); wEl.style.display='block'; wEl.style.color='var(--txt)';
       wEl.textContent = w.z==='neck'||w.z==='above' ? w.name : `${w.name} · ${w.mm}${typeof w.mm==='number'?' mm':''}`; }
-    else if (S.target && G) { wEl.style.display='block'; wEl.style.color='var(--warn)'; wEl.textContent='Strojek nevidím'; }
+    else if (S.targets.length && G) { wEl.style.display='block'; wEl.style.color='var(--warn)'; wEl.textContent='Strojek nevidím'; }
     else wEl.style.display='none';
   }
   requestAnimationFrame(loop);
@@ -385,8 +391,9 @@ function applySettings(){
   $('mirrorBtn').textContent='Zrcadlit obraz: '+(S.mirror?'zap':'vyp');
   video.classList.toggle('mirror', S.mirror);
   $('btnSnd').classList.toggle('on', S.sound); $('btnSnd').textContent=S.sound?'🔊':'🔇';
-  $('btnCal').classList.toggle('need', !S.target);
-  $('swatch').style.background = S.target ? `hsl(${S.target[0]} 90% 55%)` : 'transparent';
+  $('btnCal').classList.toggle('need', !S.targets.length);
+  const sw=(t)=>t?`hsl(${t[0]} 90% 55%)`:'transparent';
+  $('swatch').style.background=sw(S.targets[0]); $('swatch2').style.background=sw(S.targets[1]);
 }
 function render(){
   const s=steps[S.step];
@@ -394,8 +401,8 @@ function render(){
   $('guard').textContent=typeof s.g==='function'?s.g():s.g;
   $('stepText').textContent=s.x; $('stepWarn').innerHTML='<b>Pozor:</b> '+s.w;
   const sh=$('shield');
-  if (s.guard){ sh.style.display='block'; sh.className=S.target?'':'off';
-    sh.textContent = S.target ? '🛡 Hlídám linku – při přejetí pípnu a zčervenám' : '⚠️ Pro hlídání linky nastav strojek (🎯 nahoře)'; }
+  if (s.guard){ sh.style.display='block'; sh.className=S.targets.length?'':'off';
+    sh.textContent = S.targets.length ? '🛡 Hlídám linku – při přejetí pípnu a zčervenám' : '⚠️ Pro hlídání linky nastav strojek (🎯 nahoře)'; }
   else sh.style.display='none';
   $('prev').disabled=S.step===0; $('next').textContent=S.step===steps.length-1?'Znovu od začátku':'Další ▶';
   setAlert(null);
