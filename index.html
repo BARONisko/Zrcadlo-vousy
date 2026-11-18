@@ -3,252 +3,414 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vousy">
 <title>Zrcadlo na vousy</title>
 <style>
-  :root{--bg:#0f1115;--panel:rgba(18,20,26,.92);--txt:#eef0f4;--mut:#9aa3b2;--acc:#4fd1a5;--warn:#ffb547;--bad:#ff5d5d;--cheek:#4f9dff;--chin:#4fd1a5;--side:#b18cff;--must:#ffd166}
+  :root{--bg:#0f1115;--panel:rgba(18,20,26,.92);--txt:#eef0f4;--mut:#9aa3b2;--acc:#4fd1a5;--warn:#ffb547;--bad:#ff4d4d;--cheek:#4f9dff;--chin:#4fd1a5;--side:#b18cff;--must:#ffd166}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:15px/1.4 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:15px/1.4 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
   #stage{position:fixed;inset:0;background:#000}
-  #video,#photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
-  .mirror{transform:scaleX(-1)}
-  #overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  #start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:radial-gradient(circle at 50% 35%,#1d2230,#0f1115)}
-  #start h1{margin:0;font-size:24px}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+  #video.mirror{transform:scaleX(-1)}
+  #cv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;touch-action:none}
+  #start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:radial-gradient(circle at 50% 35%,#1d2230,#0f1115);z-index:5}
+  #start h1{margin:0;font-size:26px}
   #start p{margin:0;color:var(--mut);max-width:340px}
-  button,.btn{background:#262b37;color:var(--txt);border:1px solid #333a49;border-radius:12px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
-  button.pri,.btn.pri{background:var(--acc);color:#06221a;border-color:var(--acc)}
-  .btn{display:inline-block}
-  #camErr{color:var(--warn);display:none;max-width:340px}
-  #top{position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-  #top button{padding:7px 10px;font-size:13px;border-radius:999px;background:rgba(20,22,28,.75)}
+  #startMsg{color:var(--warn)!important}
+  button{background:#262b37;color:var(--txt);border:1px solid #333a49;border-radius:12px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+  button.pri{background:var(--acc);color:#06221a;border-color:var(--acc)}
+  button:disabled{opacity:.4}
+  #top{position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 8px) 8px 6px;display:none;gap:6px;flex-wrap:wrap;justify-content:center;z-index:3}
+  #top button{padding:7px 10px;font-size:13px;border-radius:999px;background:rgba(20,22,28,.78)}
   #top button.on{background:var(--acc);color:#06221a;border-color:var(--acc)}
-  #panel{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);background:var(--panel);border:1px solid #2a303c;border-radius:16px;padding:12px 14px;backdrop-filter:blur(8px)}
+  #top button.need{background:var(--warn);color:#2a1a00;border-color:var(--warn)}
+  #status{position:absolute;top:calc(env(safe-area-inset-top) + 50px);left:50%;transform:translateX(-50%);background:rgba(20,22,28,.8);padding:5px 12px;border-radius:999px;font-size:13px;display:none;z-index:3;white-space:nowrap}
+  #where{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 82px);font-weight:800;font-size:18px;padding:6px 14px;border-radius:12px;background:rgba(20,22,28,.8);display:none;z-index:3;white-space:nowrap}
+  #alert{position:absolute;inset:0;border:10px solid var(--bad);display:none;z-index:2;pointer-events:none;box-shadow:inset 0 0 60px rgba(255,77,77,.6)}
+  #alert div{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);background:var(--bad);color:#fff;font-weight:900;font-size:24px;padding:12px 18px;border-radius:14px;white-space:nowrap}
+  #calib{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 56px);background:var(--warn);color:#2a1a00;padding:10px 14px;border-radius:14px;font-weight:700;display:none;z-index:4;text-align:center}
+  #panel{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);background:var(--panel);border:1px solid #2a303c;border-radius:16px;padding:12px 14px;backdrop-filter:blur(8px);display:none;z-index:3}
   #stepHead{display:flex;align-items:center;gap:8px}
   #stepNo{font-size:12px;color:var(--mut)}
   #stepTitle{font-weight:700;font-size:17px;flex:1}
   #guard{font-weight:800;font-size:15px;padding:3px 9px;border-radius:999px;background:#2b3240;white-space:nowrap}
+  #fold{padding:4px 10px}
   #stepText{margin:6px 0 4px}
-  #stepWarn{margin:6px 0 0;padding:7px 10px;border-radius:10px;background:rgba(255,93,93,.14);border-left:3px solid var(--bad);font-size:14px}
+  #shield{font-size:13px;font-weight:700;color:var(--acc);margin:4px 0}
+  #shield.off{color:var(--warn)}
+  #stepWarn{margin:6px 0 0;padding:7px 10px;border-radius:10px;background:rgba(255,77,77,.14);border-left:3px solid var(--bad);font-size:14px}
   #stepWarn b{color:var(--bad)}
   #nav{display:flex;gap:8px;margin-top:10px}
   #nav button{flex:1}
-  #sheet{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end}
-  #sheet .in{background:#151820;width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80%;overflow:auto}
-  #sheet h2{margin:0 0 10px;font-size:18px}
+  #sheet{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:6}
+  #sheet .in{background:#151820;width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:85%;overflow:auto}
+  #sheet h2{margin:0 0 8px;font-size:18px}
   .row{display:flex;align-items:center;gap:10px;margin:10px 0}
   .row label{flex:1}
-  .row input[type=range]{flex:1.4}
-  .row output{width:52px;text-align:right;font-weight:700}
+  .row input[type=range]{flex:1.3}
+  .row output{width:56px;text-align:right;font-weight:700}
   .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
   .hint{color:var(--mut);font-size:13px}
-  input[type=file]{display:none}
+  #swatch{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:middle;border:1px solid #fff4;margin-left:6px}
 </style>
 </head>
 <body>
 <div id="stage">
   <video id="video" class="mirror" autoplay playsinline muted></video>
-  <img id="photo" alt="">
-  <svg id="overlay" viewBox="0 0 100 140" preserveAspectRatio="xMidYMid meet">
-    <defs>
-      <marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="#fff"/>
-      </marker>
-    </defs>
-    <g id="fit">
-      <!-- vodítko obličeje -->
-      <g id="lyFace">
-        <ellipse cx="50" cy="60" rx="30" ry="40" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width=".5" stroke-dasharray="2 2"/>
-        <line id="center" x1="50" y1="18" x2="50" y2="118" stroke="#fff" stroke-opacity=".25" stroke-width=".3" stroke-dasharray="1.5 1.5"/>
-        <line x1="36" y1="50" x2="64" y2="50" stroke="#fff" stroke-opacity=".25" stroke-width=".3" stroke-dasharray="1.5 1.5"/>
-        <text x="50" y="47.5" font-size="2.6" fill="#fff" fill-opacity=".55" text-anchor="middle">oči sem</text>
-      </g>
-      <!-- zóny -->
-      <g id="lyZones">
-        <g id="zSide" fill="var(--side)" fill-opacity=".28" stroke="var(--side)" stroke-width=".4">
-          <path d="M21,46 L27,46 L28,63 L22,65 Z"/><path d="M79,46 L73,46 L72,63 L78,65 Z"/>
-        </g>
-        <g id="zCheek" fill="var(--cheek)" fill-opacity=".25" stroke="var(--cheek)" stroke-width=".4">
-          <path d="M22,65 L28,63 Q33,70 38,76 L39,86 L36,96 Q28,90 23,78 Z"/>
-          <path d="M78,65 L72,63 Q67,70 62,76 L61,86 L64,96 Q72,90 77,78 Z"/>
-        </g>
-        <g id="zChin" fill="var(--chin)" fill-opacity=".25" stroke="var(--chin)" stroke-width=".4">
-          <path d="M39,86 Q50,84 61,86 L64,96 Q57,103 50,104 Q43,103 36,96 Z"/>
-        </g>
-        <g id="zMust" fill="var(--must)" fill-opacity=".3" stroke="var(--must)" stroke-width=".4">
-          <path d="M39,77 Q50,72 61,77 L60,80 Q50,77.5 40,80 Z"/>
-        </g>
-        <g id="zNeck" fill="var(--bad)" fill-opacity=".2" stroke="none">
-          <path d="M23,74 Q30,108 50,112 Q70,108 77,74 L84,74 Q86,130 50,134 Q14,130 16,74 Z"/>
-        </g>
-        <g id="labels" font-size="3" font-weight="700" fill="#fff" text-anchor="middle" style="paint-order:stroke" stroke="#000" stroke-width=".6" stroke-opacity=".6">
-          <text id="tSideL" x="24.5" y="56"></text><text id="tSideR" x="75.5" y="56"></text>
-          <text id="tCheekL" x="30" y="81"></text><text id="tCheekR" x="70" y="81"></text>
-          <text id="tChin" x="50" y="96"></text>
-          <text id="tMust" x="50" y="71.5" font-size="2.4">nůžky</text>
-          <text id="tNeck" x="50" y="124">0 mm – vyholit</text>
-        </g>
-      </g>
-      <!-- linie -->
-      <g id="lyLines" fill="none" stroke-linecap="round">
-        <path id="neckLine" d="M23,74 Q30,108 50,112 Q70,108 77,74" stroke="#fff" stroke-width=".8" stroke-dasharray="2.2 1.2"/>
-        <circle cx="50" cy="118" r="1.2" fill="#fff" fill-opacity=".7"/>
-        <text x="50" y="121.8" font-size="2.2" fill="#fff" fill-opacity=".75" text-anchor="middle" stroke="none">ohryzek</text>
-        <path id="cheekL" d="M27,47 Q31,64 39,75" stroke="var(--must)" stroke-width=".6" stroke-dasharray="1.2 1"/>
-        <path id="cheekR" d="M73,47 Q69,64 61,75" stroke="var(--must)" stroke-width=".6" stroke-dasharray="1.2 1"/>
-      </g>
-      <!-- šipky směru -->
-      <g id="lyArrows" stroke="#fff" stroke-width=".7" fill="none" marker-end="url(#ah)">
-        <path id="aCheekL" d="M30,92 L28,72"/><path id="aCheekR" d="M70,92 L72,72"/>
-        <path id="aChin" d="M50,108 L50,90"/>
-        <path id="aSideL" d="M24.5,66 L24.5,50"/><path id="aSideR" d="M75.5,66 L75.5,50"/>
-        <g id="aNeck" stroke-dasharray="1 .8">
-          <path d="M40,128 L36,118"/><path d="M60,128 L64,118"/>
-        </g>
-      </g>
-    </g>
-  </svg>
+  <canvas id="cv"></canvas>
+  <div id="alert"><div id="alertTxt">STOP – nad linkou!</div></div>
+  <div id="status"></div>
+  <div id="where"></div>
+  <div id="calib">Klepni na nálepku na strojku 👆<br><span style="font-weight:500">Drž strojek u obličeje tak, jak budeš stříhat.</span></div>
 
   <div id="start">
     <h1>Zrcadlo na vousy</h1>
-    <p>Zapni přední kameru, srovnej obličej do přerušovaného oválu (oči na vodorovnou čáru) a jeď podle kroků dole.</p>
+    <p>Linky se samy přichytí na obličej. Nálepku na strojku aplikace sleduje a upozorní tě, když přejedeš linku.</p>
     <button class="pri" id="btnCam">Zapnout kameru</button>
-    <p id="camErr">Kamera tady není povolená. Vyfoť se a vodítka ti ukážu přes fotku – nebo si aplikaci otevři jako samostatnou stránku.</p>
-    <label class="btn" for="file">Vyfotit se / nahrát fotku</label>
-    <input type="file" id="file" accept="image/*" capture="user">
+    <p id="startMsg"></p>
+    <p class="hint">Tip: na zadní stranu hlavy strojku nalep malou výraznou nálepku (neonově zelenou, růžovou nebo modrou), která míří do kamery.</p>
   </div>
 
-  <div id="top" style="display:none">
-    <button data-ly="lyLines" class="on">Linky</button>
-    <button data-ly="lyZones" class="on">Zóny</button>
-    <button data-ly="lyArrows" class="on">Směr</button>
-    <button data-ly="lyFace" class="on">Ovál</button>
-    <button id="btnSet">⚙︎ Nastavení</button>
+  <div id="top">
+    <button data-ly="lines" class="on">Linky</button>
+    <button data-ly="zones" class="on">Zóny</button>
+    <button id="btnCal">🎯 Strojek</button>
+    <button id="btnSnd" class="on">🔊</button>
+    <button id="btnSet">⚙︎</button>
   </div>
 
-  <div id="panel" style="display:none">
-    <div id="stepHead"><span id="stepNo"></span><span id="stepTitle"></span><span id="guard"></span><button id="fold" style="padding:4px 10px">▾</button></div>
+  <div id="panel">
+    <div id="stepHead"><span id="stepNo"></span><span id="stepTitle"></span><span id="guard"></span><button id="fold">▾</button></div>
     <div id="body">
-    <div id="stepText"></div>
-    <div id="stepWarn"></div>
-    <div id="nav"><button id="prev">◀ Zpět</button><button class="pri" id="next">Další ▶</button></div>
+      <div id="stepText"></div>
+      <div id="shield"></div>
+      <div id="stepWarn"></div>
+      <div id="nav"><button id="prev">◀ Zpět</button><button class="pri" id="next">Další ▶</button></div>
     </div>
   </div>
 
   <div id="sheet"><div class="in">
-    <h2>Nastavení</h2>
-    <div class="hint">Vodítka posuň a zvětši tak, aby ovál seděl na obličej.</div>
-    <div class="row"><label>Velikost vodítek</label><input type="range" id="sc" min="60" max="160" value="95"><output id="scO"></output></div>
-    <div class="row"><label>Posun nahoru/dolů</label><input type="range" id="dy" min="-40" max="40" value="0"><output id="dyO"></output></div>
-    <div class="row"><label>Výška linie na krku</label><input type="range" id="nk" min="-10" max="10" value="0"><output id="nkO"></output></div>
-    <h2 style="margin-top:16px">Nástavce</h2>
-    <div class="row"><label><span class="sw" style="background:var(--cheek)"></span>Tváře</label><input type="range" id="gCheek" min="3" max="25" value="9"><output id="gCheekO"></output></div>
-    <div class="row"><label><span class="sw" style="background:var(--chin)"></span>Brada</label><input type="range" id="gChin" min="3" max="25" value="12"><output id="gChinO"></output></div>
-    <div class="row"><label><span class="sw" style="background:var(--side)"></span>Kotlety (přechod)</label><input type="range" id="gSide" min="1" max="20" value="6"><output id="gSideO"></output></div>
-    <div class="row" style="margin-top:14px"><button id="mirrorBtn" style="flex:1">Zrcadlit obraz: zap</button><button class="pri" id="closeSet" style="flex:1">Hotovo</button></div>
+    <h2>Linky</h2>
+    <div class="row"><label>Linie na krku (níž ↔ výš)</label><input type="range" id="neck" min="20" max="60" value="38"><output id="neckO"></output></div>
+    <div class="row"><label>Linie na tvářích (níž ↔ výš)</label><input type="range" id="cheek" min="-15" max="15" value="0"><output id="cheekO"></output></div>
+    <div class="row"><label>Tolerance upozornění</label><input type="range" id="tol" min="0" max="10" value="3"><output id="tolO"></output></div>
+    <div class="hint">Linie na krku: čím menší číslo, tím blíž k bradě. Má být 1–2 prsty nad ohryzkem.</div>
+    <h2 style="margin-top:16px">Nástavce (kolečko na strojku)</h2>
+    <div class="row"><label><span class="sw" style="background:var(--cheek)"></span>Tváře</label><input type="range" id="gCheek" min="1" max="20" value="9"><output id="gCheekO"></output></div>
+    <div class="row"><label><span class="sw" style="background:var(--chin)"></span>Brada</label><input type="range" id="gChin" min="1" max="20" value="12"><output id="gChinO"></output></div>
+    <div class="row"><label><span class="sw" style="background:var(--side)"></span>Kotlety</label><input type="range" id="gSide" min="1" max="20" value="6"><output id="gSideO"></output></div>
+    <h2 style="margin-top:16px">Strojek</h2>
+    <div class="row"><label>Barva nálepky <span id="swatch"></span></label><button id="btnCal2">Nastavit znovu</button></div>
+    <div class="row"><label>Citlivost na barvu</label><input type="range" id="sens" min="6" max="30" value="14"><output id="sensO"></output></div>
+    <div class="row" style="margin-top:14px"><button id="mirrorBtn" style="flex:1"></button><button class="pri" id="closeSet" style="flex:1">Hotovo</button></div>
   </div></div>
 </div>
 
-<script>
+<script type="module">
 const $ = id => document.getElementById(id);
-const S = {sc:95, dy:-16, nk:0, gCheek:9, gChin:12, gSide:6, mirror:true, step:0};
-try { Object.assign(S, JSON.parse(localStorage.getItem('vousy') || '{}')); } catch(e){}
-const save = () => { try { localStorage.setItem('vousy', JSON.stringify(S)); } catch(e){} };
+const S = {neck:38, cheek:0, tol:3, gCheek:9, gChin:12, gSide:6, sens:14, mirror:true, sound:true, step:0, target:null};
+try { Object.assign(S, JSON.parse(localStorage.getItem('vousy2') || '{}')); } catch(e){}
+const save = () => { try { localStorage.setItem('vousy2', JSON.stringify(S)); } catch(e){} };
+const show = {lines:true, zones:true};
 
 const steps = [
-  {t:'Příprava', z:[], g:'—',
-   x:'Vousy umyj a nech úplně vyschnout. Pročeš je hřebenem dolů. Srovnej obličej do oválu (⚙︎ Nastavení → velikost a posun).',
+  {t:'Příprava', g:'—', zones:[], x:'Vousy umyj a nech uschnout, pročeš je dolů. Klepni na 🎯 Strojek a nastav nálepku.',
    w:'Mokré vousy vypadají delší – ustřihneš víc, než chceš.'},
-  {t:'Tváře', z:['zCheek'], a:['aCheekL','aCheekR'], g:()=>S.gCheek+' mm',
-   x:'Nasaď nástavec a jeď pomalu zespoda nahoru po celé modré ploše. Přes každé místo víckrát.',
-   w:'Netlač strojek do kůže, jen ho veď. Nejdřív radši delší nástavec – zkrátit jde vždycky.'},
-  {t:'Brada', z:['zChin'], a:['aChin'], g:()=>S.gChin+' mm',
-   x:'Zelená plocha zůstává o něco delší než tváře – obličej to opticky protáhne.',
-   w:'Nepoužívej tu stejný nástavec jako na tváře, brada by „zmizela“.'},
-  {t:'Kotlety – přechod', z:['zSide'], a:['aSideL','aSideR'], g:()=>S.gSide+' mm',
-   x:'Fialovou část u ucha zkrať, ať vousy plynule navážou na krátké vlasy po stranách. Kratší nástavec jen do poloviny kotlety, pak strojek odklop od kůže.',
-   w:'Nedělej ostrý schod mezi kotletou a tváří – přechod má být postupný.'},
-  {t:'Linie na krku', z:['zNeck'], a:['aNeck'], lines:['neckLine'], g:'0 mm',
-   x:'Bez nástavce obkresli přerušovanou linii do U od ucha k uchu, 1–2 prsty nad ohryzkem. Pak vyholi všechno pod ní (červené).',
-   w:'Linii nedávej nahoru k čelisti – vypadá to pak jako dvojitá brada. Na krku chlupy rostou různě: přejeď prstem, kudy to drhne, tam stříháš.'},
-  {t:'Horní linie na tvářích', z:[], lines:['cheekL','cheekR'], g:'bez nástavce',
-   x:'Žlutou linii nech přirozenou. Odstraň jen jednotlivé chloupky, které trčí nad ní.',
-   w:'Neholit rovnou čáru vysoko na tváři – působí uměle a zpátky to roste týdny.'},
-  {t:'Knír', z:['zMust'], g:'nůžky',
-   x:'Pročeš knír dolů a nůžkami zastřihni podél horního rtu.',
+  {t:'Tváře', g:()=>S.gCheek+' mm', zones:['cheek'], x:'Jeď pomalu zespoda nahoru po modré ploše, přes každé místo víckrát.',
+   w:'Netlač strojek do kůže. Radši začni delším nástavcem.'},
+  {t:'Brada', g:()=>S.gChin+' mm', zones:['chin'], x:'Brada zůstává o kousek delší než tváře – opticky protáhne obličej.',
+   w:'Nepoužívej tu nástavec z tváří, brada by „zmizela“.'},
+  {t:'Kotlety – přechod', g:()=>S.gSide+' mm', zones:['side'], x:'U ucha vousy zkrať, ať plynule navážou na krátké vlasy. Kratším nástavcem jen do půlky kotlety, pak strojek odklop.',
+   w:'Žádný ostrý schod mezi kotletou a tváří.'},
+  {t:'Linie na krku', g:'bez hřebenu', zones:['neck'], guard:'neck', x:'Sundej hřeben. Obkresli bílou linii do U a vyholi všechno pod ní (červené). Aplikace hlídá, ať nepřejedeš nad linku.',
+   w:'Linii nedávej k čelisti – vypadá to jako dvojitá brada. Na krku přejeď prstem, kudy chlupy drhnou.'},
+  {t:'Horní linie na tvářích', g:'bez hřebenu', zones:[], guard:'cheek', x:'Jen odstraň jednotlivé chloupky nad žlutou linií. Aplikace hlídá, ať nezajedeš pod ni do vousů.',
+   w:'Nedělej rovnou vyholenou čáru vysoko – působí uměle.'},
+  {t:'Knír', g:'nůžky', zones:['must'], x:'Pročeš knír dolů a nůžkami zastřihni podél horního rtu.',
    w:'Strojkem proti srsti na knír opatrně – snadno vznikne díra.'},
-  {t:'Kontrola', z:['zSide','zCheek','zChin','zMust'], lines:['neckLine','cheekL','cheekR'], g:'✓',
-   x:'Otoč hlavu doleva a doprava a porovnej obě strany podle středové čáry. Kde je něco delší, dorovnej stejným nástavcem.',
-   w:'Vždy dorovnávej stejným nástavcem – kratší sáhni jen když je to opravdu potřeba.'}
+  {t:'Kontrola', g:'✓', zones:['cheek','chin','side'], x:'Otoč hlavu doleva a doprava a porovnej strany. Dorovnávej stejným nástavcem.',
+   w:'Kratší nástavec jen když je to opravdu potřeba.'}
 ];
 
-function applyFit(){
-  const k = S.sc/100;
-  $('fit').setAttribute('transform', `translate(50 ${60+S.dy}) scale(${k}) translate(-50 -60)`);
-  const n = +S.nk;
-  const d = `M23,${74+n*.3} Q30,${108+n} 50,${112+n} Q70,${108+n} 77,${74+n*.3}`;
-  $('neckLine').setAttribute('d', d);
-  $('zNeck').firstElementChild.setAttribute('d', d + ` L84,${74+n*.3} Q86,130 50,134 Q14,130 16,${74+n*.3} Z`);
-  ['tCheekL','tCheekR'].forEach(i=>$(i).textContent=S.gCheek+' mm');
-  $('tChin').textContent = S.gChin+' mm';
-  ['tSideL','tSideR'].forEach(i=>$(i).textContent=S.gSide);
-  $('video').classList.toggle('mirror', S.mirror);
-  $('photo').classList.toggle('mirror', false);
-  $('mirrorBtn').textContent = 'Zrcadlit obraz: ' + (S.mirror?'zap':'vyp');
-  ['sc','dy','nk','gCheek','gChin','gSide'].forEach(i=>{ $(i).value=S[i]; });
-  $('scO').textContent=S.sc+' %'; $('dyO').textContent=S.dy; $('nkO').textContent=S.nk;
-  $('gCheekO').textContent=S.gCheek+' mm'; $('gChinO').textContent=S.gChin+' mm'; $('gSideO').textContent=S.gSide+' mm';
+// ---------- geometrie ----------
+const V = (x,y)=>({x,y});
+const add=(a,b)=>V(a.x+b.x,a.y+b.y), sub=(a,b)=>V(a.x-b.x,a.y-b.y), mul=(a,k)=>V(a.x*k,a.y*k);
+const dot=(a,b)=>a.x*b.x+a.y*b.y, len=a=>Math.hypot(a.x,a.y), norm=a=>mul(a,1/(len(a)||1));
+function quad(p0,c,p2,n=24){const r=[];for(let i=0;i<=n;i++){const t=i/n,u=1-t;r.push(V(u*u*p0.x+2*u*t*c.x+t*t*p2.x,u*u*p0.y+2*u*t*c.y+t*t*p2.y));}return r;}
+function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)c=!c;}return c;}
+function distPoly(p,pl){let m=1e9;for(let i=0;i<pl.length-1;i++){const a=pl[i],b=pl[i+1],ab=sub(b,a);const t=Math.max(0,Math.min(1,dot(sub(p,a),ab)/(dot(ab,ab)||1)));m=Math.min(m,len(sub(p,add(a,mul(ab,t)))));}return m;}
+
+let G = null; // aktuální geometrie obličeje (v souřadnicích surového videa)
+function buildGeom(L, W, H){
+  const P = i => V(L[i].x*W, L[i].y*H);
+  const eA=P(33), eB=P(263), chin=P(152), mid=mul(add(eA,eB),.5);
+  const e = norm(sub(eB,eA));
+  let dn = V(-e.y, e.x); if (dot(dn, sub(chin,mid))<0) dn = mul(dn,-1);
+  const F = len(sub(chin,mid));
+  const side = p => dot(sub(p,mid), e);
+  // krk
+  const j0 = add(P(132), mul(dn,.12*F)), j2 = add(P(361), mul(dn,.12*F));
+  const B = add(chin, mul(dn, S.neck/100*F));
+  const C = sub(mul(B,2), mul(add(j0,j2),.5));
+  const neck = quad(j0,C,j2);
+  const neckPoly = [...neck, add(j2,mul(dn,.9*F)), add(j0,mul(dn,.9*F))];
+  // tváře – horní linie
+  const lip = P(13);
+  const corners = [P(61),P(291)].map(c=>add(add(c, mul(sub(c,lip),.3)), mul(dn,-.04*F)));
+  const tops = [P(127),P(356)];
+  const off = mul(dn, -S.cheek/100*F);
+  const cheekLines = tops.map(t=>{
+    const c = corners.reduce((a,b)=>Math.sign(side(a))===Math.sign(side(t))?a:b);
+    const s0 = add(t,off), s2 = add(c,off), cc = add(add(mul(add(s0,s2),.5), mul(dn,.05*F)), V(0,0));
+    const line = quad(s0,cc,s2,16);
+    const above = [...line, add(s2,mul(dn,-.7*F)), add(s0,mul(dn,-.7*F))];
+    return {line, above, s0, s2};
+  });
+  // linie čelisti pro zóny
+  const jaw = ids => ids.map(P);
+  return {P, mid, e, dn, F, chin, side, neck, neckPoly, cheekLines,
+    zone:{
+      side:[jaw([234,93]), jaw([454,323])],
+      cheek:[jaw([132,58,172,136,150]), jaw([361,288,397,365,379])],
+      chin:[jaw([149,176,148,152,377,400,378])],
+      must:[jaw([61,40,37,0,267,270,291])]
+    },
+    labels:{
+      cheek:[mul(add(P(132),P(61)),.5), mul(add(P(361),P(291)),.5)],
+      chin:[add(chin, mul(dn,-.12*F))],
+      side:[add(P(234), mul(sub(mid,P(234)),.12)), add(P(454), mul(sub(mid,P(454)),.12))]
+    }};
 }
 
-const allZones = ['zSide','zCheek','zChin','zMust','zNeck'];
-const allArrows = ['aCheekL','aCheekR','aChin','aSideL','aSideR','aNeck'];
-const allLines = ['neckLine','cheekL','cheekR'];
-function render(){
-  const s = steps[S.step];
-  $('stepNo').textContent = (S.step+1)+'/'+steps.length;
-  $('stepTitle').textContent = s.t;
-  $('guard').textContent = typeof s.g==='function' ? s.g() : s.g;
-  $('stepText').textContent = s.x;
-  $('stepWarn').innerHTML = '<b>Pozor:</b> ' + s.w;
-  const show = (ids, on) => ids.forEach(i => { const el=$(i); el.style.opacity = on.includes(i) ? 1 : .12; });
-  show(allZones, s.z||[]);
-  allArrows.forEach(i => $(i).style.display = (s.a||[]).includes(i) ? '' : 'none');
-  show(allLines, s.lines||[]);
-  $('prev').disabled = S.step===0;
-  $('next').textContent = S.step===steps.length-1 ? 'Znovu od začátku' : 'Další ▶';
-  // popisky zón jen u aktivních
-  const lab = {zSide:['tSideL','tSideR'], zCheek:['tCheekL','tCheekR'], zChin:['tChin'], zMust:['tMust'], zNeck:['tNeck']};
-  Object.entries(lab).forEach(([z,ts]) => ts.forEach(t => $(t).style.display = (s.z||[]).includes(z) ? '' : 'none'));
+function whereIs(p){
+  if (!G) return null;
+  if (inPoly(p,G.neckPoly)) return {z:'neck', name:'krk – vyholit', mm:'0'};
+  for (const c of G.cheekLines) if (inPoly(p,c.above)) return {z:'above', name:'nad linkou tváře', mm:'–'};
+  const s = Math.abs(G.side(p)), dv = dot(sub(p,G.mid),G.dn);
+  if (dv < .55*G.F && dv > .2*G.F && s > .55*G.F) return {z:'side', name:'kotleta', mm:S.gSide};
+  if (dv > .78*G.F && s < .3*G.F) return {z:'chin', name:'brada', mm:S.gChin};
+  if (dv > .62*G.F && dv < .82*G.F && s < .22*G.F) return {z:'must', name:'knír / ret', mm:'nůžky'};
+  return {z:'cheek', name:'tvář', mm:S.gCheek};
 }
 
-function enterApp(){
-  $('start').style.display='none'; $('top').style.display='flex'; $('panel').style.display='block';
-  applyFit(); render();
-}
+// ---------- kamera, model ----------
+const video=$('video'), cv=$('cv'), ctx=cv.getContext('2d');
+const scan=document.createElement('canvas'), sctx=scan.getContext('2d',{willReadFrequently:true});
+let W=0,H=0, landmarker=null, audio=null, lastTs=-1, marker=null, markerSeen=0, calibrating=false;
 
 $('btnCam').onclick = async () => {
+  try { audio = new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); } catch(e){}
+  $('startMsg').textContent = 'Zapínám kameru…';
   try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no');
-    const st = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user', width:{ideal:1280}, height:{ideal:1280}}, audio:false});
-    $('video').srcObject = st; $('video').style.display='block'; enterApp();
-  } catch(e) { $('camErr').style.display='block'; }
-};
-$('file').onchange = e => {
-  const f = e.target.files && e.target.files[0]; if(!f) return;
-  $('photo').src = URL.createObjectURL(f); $('photo').style.display='block'; enterApp();
+    const st = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:960},height:{ideal:1280}},audio:false});
+    video.srcObject = st; video.style.display='block';
+    await new Promise(r => video.onloadedmetadata = r); await video.play();
+  } catch(e) { $('startMsg').textContent = 'Kameru se nepodařilo zapnout. Povol ji v nastavení prohlížeče a zkus to znovu.'; return; }
+  W=cv.width=video.videoWidth; H=cv.height=video.videoHeight;
+  const sw=160; scan.width=sw; scan.height=Math.round(sw*H/W);
+  $('startMsg').textContent = 'Načítám rozpoznávání obličeje…';
+  try {
+    const base='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    const vision = await import(base);
+    const fs = await vision.FilesetResolver.forVisionTasks(base+'/wasm');
+    const opts = d => ({baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate:d}, runningMode:'VIDEO', numFaces:1});
+    try { landmarker = await vision.FaceLandmarker.createFromOptions(fs, opts('GPU')); }
+    catch(e) { landmarker = await vision.FaceLandmarker.createFromOptions(fs, opts('CPU')); }
+  } catch(e) { status('Rozpoznávání obličeje se nenačetlo – zkontroluj internet', 0); }
+  $('start').style.display='none'; $('top').style.display='flex'; $('panel').style.display='block';
+  applySettings(); render();
+  requestAnimationFrame(loop);
 };
 
-document.querySelectorAll('#top [data-ly]').forEach(b => b.onclick = () => {
-  b.classList.toggle('on'); $(b.dataset.ly).style.display = b.classList.contains('on') ? '' : 'none';
+let statusTimer=null;
+function status(t, ms=2500){ const s=$('status'); s.textContent=t; s.style.display=t?'block':'none'; clearTimeout(statusTimer); if(ms) statusTimer=setTimeout(()=>s.style.display='none',ms); }
+
+// ---------- barva nálepky ----------
+function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;
+  if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}
+  return [h, mx?d/mx:0, mx];}
+
+function trackMarker(){
+  if (!S.target) { marker=null; return; }
+  sctx.drawImage(video,0,0,scan.width,scan.height);
+  const k = scan.width/W;
+  let x0=0,y0=0,x1=scan.width,y1=scan.height;
+  if (G) { // hledej jen kolem obličeje
+    const r=1.3*G.F*k, c=mul(G.chin,k);
+    x0=Math.max(0,Math.floor(c.x-r)); x1=Math.min(scan.width,Math.ceil(c.x+r));
+    y0=Math.max(0,Math.floor(c.y-1.6*r)); y1=Math.min(scan.height,Math.ceil(c.y+.9*r));
+  }
+  if (x1<=x0||y1<=y0) { marker=null; return; }
+  const d = sctx.getImageData(x0,y0,x1-x0,y1-y0).data, w=x1-x0;
+  const [th,ts,tv]=S.target, tolH=S.sens, minS=Math.max(.25,ts*.5), minV=Math.max(.18,tv*.4);
+  let n=0,sx=0,sy=0;
+  for (let i=0,p=0;i<d.length;i+=4,p++){
+    const [h,s,v]=rgb2hsv(d[i],d[i+1],d[i+2]);
+    if (s<minS||v<minV) continue;
+    let dh=Math.abs(h-th); if(dh>180)dh=360-dh;
+    if (dh<=tolH){ n++; sx+=p%w; sy+=(p/w)|0; }
+  }
+  if (n>=5){
+    const m = V((x0+sx/n)/k, (y0+sy/n)/k);
+    marker = marker ? add(mul(marker,.45), mul(m,.55)) : m;
+    markerSeen = performance.now();
+  } else if (performance.now()-markerSeen > 400) marker=null;
+}
+
+function screenToRaw(cx,cy){
+  const r=cv.getBoundingClientRect(), sc=Math.max(r.width/W, r.height/H);
+  let x=(cx-r.left-(r.width-W*sc)/2)/sc, y=(cy-r.top-(r.height-H*sc)/2)/sc;
+  if (S.mirror) x=W-x;
+  return V(x,y);
+}
+function startCalib(){ calibrating=true; $('calib').style.display='block'; $('sheet').style.display='none'; }
+$('btnCal').onclick = startCalib; $('btnCal2').onclick = startCalib;
+cv.addEventListener('pointerdown', ev => {
+  if (!calibrating) return;
+  const p = screenToRaw(ev.clientX, ev.clientY);
+  const t=document.createElement('canvas'); t.width=W; t.height=H; const tc=t.getContext('2d'); tc.drawImage(video,0,0);
+  const R=Math.max(3,Math.round(W/200)); const d=tc.getImageData(Math.max(0,p.x-R)|0,Math.max(0,p.y-R)|0,2*R,2*R).data;
+  let r=0,g=0,b=0,n=0; for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
+  const hsv=rgb2hsv(r/n,g/n,b/n);
+  calibrating=false; $('calib').style.display='none';
+  if (hsv[1]<.3){ status('Tahle barva je moc šedá – použij výraznou barevnou nálepku', 4000); return; }
+  S.target=hsv; save(); applySettings(); status('Strojek nastaven ✓', 2000);
 });
-$('btnSet').onclick = () => $('sheet').style.display='flex';
-$('closeSet').onclick = () => $('sheet').style.display='none';
-$('sheet').onclick = e => { if(e.target.id==='sheet') $('sheet').style.display='none'; };
-$('mirrorBtn').onclick = () => { S.mirror=!S.mirror; save(); applyFit(); };
-['sc','dy','nk','gCheek','gChin','gSide'].forEach(i => $(i).oninput = e => { S[i]=+e.target.value; save(); applyFit(); render(); });
-$('fold').onclick = () => { const b=$('body'); const h=b.style.display!=='none'; b.style.display=h?'none':''; $('fold').textContent=h?'▴':'▾'; };
-$('prev').onclick = () => { if(S.step>0){S.step--; save(); render();} };
-$('next').onclick = () => { S.step = S.step===steps.length-1 ? 0 : S.step+1; save(); render(); };
-applyFit(); render();
+
+// ---------- upozornění ----------
+let lastBeep=0, alertOn=false;
+function beep(){
+  const now=performance.now(); if (now-lastBeep<350) return; lastBeep=now;
+  try { if (navigator.vibrate) navigator.vibrate(120); } catch(e){}
+  if (!S.sound||!audio) return;
+  try { const o=audio.createOscillator(), g=audio.createGain(); o.type='square'; o.frequency.value=880;
+    g.gain.setValueAtTime(.25,audio.currentTime); g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.15);
+    o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime+.16); } catch(e){}
+}
+function setAlert(txt){
+  if (txt){ $('alertTxt').textContent=txt; $('alert').style.display='block'; beep(); }
+  else $('alert').style.display='none';
+  alertOn=!!txt;
+}
+function checkGuard(){
+  const st=steps[S.step];
+  if (!st.guard || !marker || !G) return setAlert(null);
+  const tol = S.tol/100*G.F;
+  if (st.guard==='neck'){
+    const near = len(sub(marker,G.chin)) < 1.3*G.F;
+    if (near && !inPoly(marker,G.neckPoly) && distPoly(marker,G.neck) > tol && dot(sub(marker,G.mid),G.dn) > .45*G.F)
+      return setAlert('STOP – nad linkou!');
+  } else if (st.guard==='cheek'){
+    for (const c of G.cheekLines){
+      const a=G.side(c.s0), b=G.side(c.s2), s=G.side(marker);
+      const within = s>=Math.min(a,b) && s<=Math.max(a,b);
+      if (within && !inPoly(marker,c.above) && distPoly(marker,c.line) > tol && dot(sub(marker,G.mid),G.dn) < .8*G.F)
+        return setAlert('STOP – pod linkou!');
+    }
+  }
+  setAlert(null);
+}
+
+// ---------- kreslení ----------
+const X = p => S.mirror ? W-p.x : p.x;
+function path(pts, close){ ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(X(p),p.y):ctx.moveTo(X(p),p.y)); if(close) ctx.closePath(); }
+function label(p, txt, col){
+  const fs=Math.round(W/22); ctx.font=`800 ${fs}px -apple-system,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const w=ctx.measureText(txt).width+fs*.7;
+  ctx.fillStyle='rgba(0,0,0,.6)'; ctx.beginPath(); ctx.roundRect(X(p)-w/2,p.y-fs*.7,w,fs*1.4,fs*.4); ctx.fill();
+  ctx.fillStyle=col; ctx.fillText(txt,X(p),p.y);
+}
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const lw=W/160, st=steps[S.step];
+  if (G){
+    if (show.zones){
+      const zc={side:css('--side'),cheek:css('--cheek'),chin:css('--chin'),must:css('--must')};
+      for (const z in G.zone){
+        const on = st.zones.includes(z);
+        ctx.strokeStyle=zc[z]; ctx.globalAlpha=on?.75:.15; ctx.lineWidth=lw*(on?5:3); ctx.lineCap='round'; ctx.lineJoin='round';
+        G.zone[z].forEach(seg=>{path(seg); ctx.stroke();});
+      }
+      ctx.globalAlpha=1;
+      const lab={cheek:S.gCheek+' mm',chin:S.gChin+' mm',side:S.gSide+' mm'};
+      st.zones.forEach(z=>{ if(G.labels[z]) G.labels[z].forEach(p=>label(p,lab[z],zc[z])); });
+      if (st.zones.includes('neck')){ ctx.fillStyle='rgba(255,77,77,.22)'; path(G.neckPoly,true); ctx.fill(); }
+    }
+    if (show.lines){
+      const nOn = st.guard==='neck' || S.step===0 || S.step===7;
+      ctx.setLineDash([lw*3,lw*2]); ctx.lineWidth=lw*(st.guard==='neck'?1.6:1); ctx.strokeStyle='#fff'; ctx.globalAlpha=nOn?1:.35;
+      path(G.neck); ctx.stroke();
+      const cOn = st.guard==='cheek' || S.step===0 || S.step===7;
+      ctx.strokeStyle=css('--must'); ctx.lineWidth=lw*(st.guard==='cheek'?1.6:1); ctx.globalAlpha=cOn?1:.35;
+      G.cheekLines.forEach(c=>{path(c.line); ctx.stroke();});
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+    }
+  }
+  if (marker){
+    ctx.lineWidth=lw*1.2; ctx.strokeStyle=alertOn?css('--bad'):'#fff';
+    ctx.beginPath(); ctx.arc(X(marker),marker.y,W/28,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X(marker),marker.y,lw*1.2,0,7); ctx.fillStyle=ctx.strokeStyle; ctx.fill();
+  }
+}
+
+function loop(){
+  if (video.readyState>=2){
+    if (landmarker && video.currentTime!==lastTs){
+      lastTs=video.currentTime;
+      try {
+        const r = landmarker.detectForVideo(video, performance.now());
+        G = r.faceLandmarks && r.faceLandmarks.length ? buildGeom(r.faceLandmarks[0], W, H) : null;
+      } catch(e){ G=null; }
+    }
+    trackMarker();
+    checkGuard();
+    draw();
+    const wEl=$('where');
+    if (!G && landmarker) { wEl.style.display='block'; wEl.textContent='Nevidím obličej – podívej se do kamery'; wEl.style.color='var(--warn)'; }
+    else if (marker && G){ const w=whereIs(marker); wEl.style.display='block'; wEl.style.color='var(--txt)';
+      wEl.textContent = w.z==='neck'||w.z==='above' ? w.name : `${w.name} · ${w.mm}${typeof w.mm==='number'?' mm':''}`; }
+    else if (S.target && G) { wEl.style.display='block'; wEl.style.color='var(--warn)'; wEl.textContent='Strojek nevidím'; }
+    else wEl.style.display='none';
+  }
+  requestAnimationFrame(loop);
+}
+
+// ---------- UI ----------
+function applySettings(){
+  ['neck','cheek','tol','gCheek','gChin','gSide','sens'].forEach(i=>$(i).value=S[i]);
+  $('neckO').textContent=S.neck; $('cheekO').textContent=(S.cheek>0?'+':'')+S.cheek; $('tolO').textContent=S.tol;
+  $('gCheekO').textContent=S.gCheek+' mm'; $('gChinO').textContent=S.gChin+' mm'; $('gSideO').textContent=S.gSide+' mm'; $('sensO').textContent=S.sens;
+  $('mirrorBtn').textContent='Zrcadlit obraz: '+(S.mirror?'zap':'vyp');
+  video.classList.toggle('mirror', S.mirror);
+  $('btnSnd').classList.toggle('on', S.sound); $('btnSnd').textContent=S.sound?'🔊':'🔇';
+  $('btnCal').classList.toggle('need', !S.target);
+  $('swatch').style.background = S.target ? `hsl(${S.target[0]} 90% 55%)` : 'transparent';
+}
+function render(){
+  const s=steps[S.step];
+  $('stepNo').textContent=(S.step+1)+'/'+steps.length; $('stepTitle').textContent=s.t;
+  $('guard').textContent=typeof s.g==='function'?s.g():s.g;
+  $('stepText').textContent=s.x; $('stepWarn').innerHTML='<b>Pozor:</b> '+s.w;
+  const sh=$('shield');
+  if (s.guard){ sh.style.display='block'; sh.className=S.target?'':'off';
+    sh.textContent = S.target ? '🛡 Hlídám linku – při přejetí pípnu a zčervenám' : '⚠️ Pro hlídání linky nastav strojek (🎯 nahoře)'; }
+  else sh.style.display='none';
+  $('prev').disabled=S.step===0; $('next').textContent=S.step===steps.length-1?'Znovu od začátku':'Další ▶';
+  setAlert(null);
+}
+document.querySelectorAll('#top [data-ly]').forEach(b=>b.onclick=()=>{ b.classList.toggle('on'); show[b.dataset.ly]=b.classList.contains('on'); });
+$('btnSnd').onclick=()=>{ S.sound=!S.sound; save(); applySettings(); if(S.sound){ try{audio&&audio.resume();}catch(e){} beep(); } };
+$('btnSet').onclick=()=>$('sheet').style.display='flex';
+$('closeSet').onclick=()=>$('sheet').style.display='none';
+$('sheet').onclick=e=>{ if(e.target.id==='sheet') $('sheet').style.display='none'; };
+$('mirrorBtn').onclick=()=>{ S.mirror=!S.mirror; save(); applySettings(); };
+['neck','cheek','tol','gCheek','gChin','gSide','sens'].forEach(i=>$(i).oninput=e=>{ S[i]=+e.target.value; save(); applySettings(); render(); });
+$('fold').onclick=()=>{ const b=$('body'), h=b.style.display!=='none'; b.style.display=h?'none':''; $('fold').textContent=h?'▴':'▾'; };
+$('prev').onclick=()=>{ if(S.step>0){S.step--; save(); render();} };
+$('next').onclick=()=>{ S.step=S.step===steps.length-1?0:S.step+1; save(); render(); };
+applySettings(); render();
 </script>
 </body>
 </html>
